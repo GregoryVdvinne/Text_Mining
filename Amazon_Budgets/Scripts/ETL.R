@@ -46,10 +46,17 @@ read_one <- function(year_numeric) {
 all_budgets <- future_map_dfr(2005:2023, read_one)   # This will take a while to run. Go grab a coffee or something.
 
 
+
+# Remove Standad list of common words such as "and", "the', "or"
+all_budgets <-  all_budgets |>
+  anti_join(stop_words, by = "word")
+
+
 # Save in feather format so that the script can be run from this point to save time in future
 write_feather(all_budgets, here("Amazon_Budgets/Data/Intermediate/all_budgets_tidy_uncleaned.feather"))
-# Read tidy data from all years to start from this point in the script
-all_budgets <- read_feather(here("Amazon_Budgets/Data/Intermediate/all_budgets_tidy_uncleaned.feather"))
+# # Read tidy data from all years to start from this point in the script
+# all_budgets <- read_feather(here("Amazon_Budgets/Data/Intermediate/all_budgets_tidy_uncleaned.feather"))
+
 
 
 
