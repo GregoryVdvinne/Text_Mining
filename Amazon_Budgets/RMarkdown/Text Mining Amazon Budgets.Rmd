@@ -1,0 +1,137 @@
+---
+title: "Text Mining Amazon Annual Reports"
+author: "Gregory Vander Vinne"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: hide
+    toc: true
+    toc_float: false
+---
+
+```{r setup, include=TRUE, message=FALSE, warning=FALSE}
+# Setup ------------------------------------------------------------------------------------
+
+#Clear memory
+rm(list = ls(all=T))
+
+
+# Load libraries and install if not installed already
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(
+  tidyverse,  # Grammar for data and graphics
+  here,       # Relative file paths
+  tidytext,   # Text analysis in a tidy format
+  magrittr,   # More pipeable functions (eg., set_colnames())
+  pdftools,   # Read PDFs Into R
+  feather,    # Files that are fast to write and read
+  furrr       # Run functions from purrr package (e.g., map_dfr()) in parallel
+)
+
+
+#Set some output options
+knitr::opts_chunk$set(include = TRUE, warning = FALSE, message = FALSE, 
+                      fig.width = 10, fig.height = 7)
+
+
+# Read tidy data from all years to start from this point in the script
+all_budgets <- read_feather(here("Amazon_Budgets/Data/Intermediate/all_budgets_tidy_uncleaned.feather"))
+
+
+
+# Define my ggplot theme as a funciton to avoid repetitive code
+myTheme <- function(dark_text = "Black",
+                    light_text = "#5f6a72", # goa main grey
+                    line_colour = "#a5acb0", # goa midtone grey
+                    base_size = 10
+) {
+  theme_classic(base_size = base_size)+
+    theme(
+      axis.line = element_line(color = line_colour ),
+      axis.ticks.y = element_line(color = line_colour ),
+      axis.ticks.x = element_blank(),
+      plot.caption.position = "plot",
+      plot.title.position = "plot",
+      plot.title = element_text(face = "bold",
+                                size = rel(1.3),
+                                color = dark_text,
+                                margin = margin(5, 0, 5, 0)),
+      plot.subtitle = element_text(size = rel(1),
+                                   colour = light_text,
+                                   margin = margin(2, 0, 16, 0)),
+      axis.title.y = element_text(size = rel(1),
+                                  colour = light_text,
+                                  margin = margin(0, 6, 0, 0)),
+      axis.title.x = element_blank(),
+      axis.text = element_text(size = rel(0.85),
+                               colour = light_text),
+      plot.caption = element_text(size = rel(0.75),
+                                  colour = light_text,
+                                  hjust = 0,
+                                  margin = margin(12, 0, 0, 0)),
+      legend.text = element_text(size = rel(0.85),
+                                 colour = light_text),
+      legend.title = element_text(size = rel(1),
+                                  colour = light_text,
+                                  face = "bold"),
+      text = element_text(colour = light_text, lineheight = 1.1)
+    )
+}
+
+
+
+```
+
+## Intro
+
+Blah Blah Blah
+
+```{r The Most Common Words}
+
+all_budgets |>
+  group_by(word) |>
+  summarise("Word Count" = n()) |>
+  slice_max(order_by = `Word Count`, n = 10)
+
+
+```
+
+## Remove Stop Words
+
+```{r Remove Stop Words}
+
+# Remove Standad list of common words such as "and", "the', "or"
+all_budgets <-  all_budgets |>
+  anti_join(stop_words, by = "word")
+
+# A New List of the Most-Common Words
+all_budgets |>
+  group_by(word) |>
+  summarise("Word Count" = n()) |>
+  slice_max(order_by = `Word Count`, n = 10)
+
+
+```
+```{r Remove Custom List of Stop Words}
+
+my_stop_words <- c(
+  as.character(0:100), 
+  month.name,
+  str_to_lower(month.name),
+  LETTERS, 
+  letters 
+)
+
+# Remove Standad list of common words such as "and", "the', "or"
+all_budgets <-  all_budgets |>
+  filter(!(word %in% my_stop_words))
+
+# A New List of the Most-Common Words
+all_budgets |>
+  group_by(word) |>
+  summarise("Word Count" = n()) |>
+  slice_max(order_by = `Word Count`, n = 10)
+
+
+```
+
