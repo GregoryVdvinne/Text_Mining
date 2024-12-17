@@ -98,6 +98,8 @@ all_budgets |>
 
 ## Remove Stop Words
 
+We Can start by removing a list of common stop words. Stop words are words that are used commonly and unlikley to be interesting for our analysis. Examples include words such as "the", "it" and "or".
+
 ```{r Remove Stop Words}
 
 # Remove Standad list of common words such as "and", "the', "or"
@@ -112,6 +114,8 @@ all_budgets |>
 
 
 ```
+
+
 ```{r Remove Custom List of Stop Words}
 
 my_stop_words <- c(
