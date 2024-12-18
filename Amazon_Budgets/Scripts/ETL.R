@@ -38,7 +38,8 @@ read_one <- function(year_numeric) {
       text  # Name of column containing text in original dataframe
       ) |> 
     # Add Column indicating year
-    mutate(year = year_string) 
+    mutate(year = year_string, 
+           word = str_to_title(word)) # Words to Title Case
   
 }
 
