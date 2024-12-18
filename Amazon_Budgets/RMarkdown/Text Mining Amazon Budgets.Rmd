@@ -120,11 +120,11 @@ We Can start by removing a list of stop words. Stop words are words that are use
 ```{r Remove Stop Words}
 
 # Remove Standad list of common words such as "and", "the', "or"
-all_budgets <-  all_budgets |>
+all_budgets_no_stop <-  all_budgets |>
   anti_join(stop_words, by = "word")
 
 # A New List of the Most-Common Words
-all_budgets |>
+all_budgets_no_stop |>
   group_by(word) |>
   summarise("Word Count" = n()) |>
   slice_max(order_by = `Word Count`, n = 10) |>
@@ -133,24 +133,23 @@ all_budgets |>
 
 ```
 
-It is clear from the above table that there are sitll words that will not be interesting for our analysis, such as individual numbers and the word "million" which appear because of the financial tables in the document. The word "December" appears beacuse Amazon uses a fiscal year end of December 31st. Although I remove the names of all months because I think they will not be very interesting, looking into the word "December" and finding that it appears frequently because it is the month of Amazon's fiscal year-end has given us our first insight, albeit a trivial one. 
+It is clear from the above table that there are still words that will not be interesting for our analysis, such as individual numbers and the word "million" which appear because of the financial tables in the document. The word "December" appears because Amazon uses a fiscal year end of December 31st. Although I remove the names of all months because I think they will not be very interesting, looking into the word "December" and finding that it appears frequently because it is the month of Amazon's fiscal year-end has given us our first insight, albeit a trivial one. 
 
 ```{r Remove Custom List of Stop Words}
 
 # Custom list of stop words to remove
 my_stop_words <- c(   
   str_to_lower(month.name), # List of month names
-  letters,                  # List of letters
-  "million"
+  letters                  # List of letters
 )
 
 # Remove above list of custom stop words and anything contain a number
-all_budgets <-  all_budgets |>
+all_budgets_no_stop <-  all_budgets_no_stop |>
   filter(!(word %in% my_stop_words),    # List of custom stop words
         !str_detect(word, "\\d"))       # Anything containing a number
 
 # A New List of the Most-Common Words
-all_budgets |>
+all_budgets_no_stop |>
   group_by(word) |>
   summarise("Word Count" = n()) |>
   slice_max(order_by = `Word Count`, n = 10) |>
@@ -159,13 +158,13 @@ all_budgets |>
 
 ```
 
-### Raw Word Frequencies in the First 9 Reports vs The Last 10 Reports
+### Raw Term Frequencies in the First 9 Reports vs The Last 10 Reports
 
 
 ```{r Scatter of Raw Word Frequencies}
 
 # Prepare data for the scatter plot
-scatter_data <- all_budgets |>
+scatter_data <- all_budgets_no_stop |>
   mutate(first_second_half = if_else(year %in% 2005:2013, "first_half", "second_half")) |>
   group_by(first_second_half, word) |>
   summarise(word_count = n()) |>
@@ -187,7 +186,7 @@ ggplot(scatter_data, aes(x = first_half, y = second_half)) +
   my_theme()
 
 ```
-From this, we can glean a few interesting pieces of information. First, we see that words like "Cash", "Tax", and "Costs", are used at relatively similar frequencies in both the first nine annual reports and the last ten. However, words like "Billion", and "AWS", are used much more frequently in the last ten years of annual reports than the first nine. The word "Billion" likely appears more because the company has grown a great deal, and now deals in billions of dollars rather than millions. "AWS" refers to Amazon Web Services. From this graphic we might guess that Amazon Web Services has become an increasingly important part of the company over time. On the flip side, we see that the words "Stock" and "Compensation" were used more frequently in the first nine annual reports. We might want to investigate this more to understand why.
+From this, we can glean a few interesting pieces of information. First, we see that words like "Cash", "Tax", and "Costs", are used at relatively similar frequencies in both the first nine annual reports and the last ten. However, words like "Billion", and "AWS", are used much more frequently in the last ten years of annual reports than the first nine. The word "Billion" likely appears more in the second half, and million in the first half because the company has grown a great deal, and now deals in billions of dollars rather than millions. "AWS" refers to Amazon Web Services. From this graphic we might guess that Amazon Web Services has become an increasingly important part of the company over time. On the flip side, we see that the words "Stock" and "Compensation" were used more frequently in the first nine annual reports. We might want to investigate this more to understand why.
 
 
 ### Total Word Counts
@@ -197,7 +196,7 @@ One attribute of these reports that might cause an issue for our analysis is tot
 ```{r Line Graph Total Word Count}
 
 # Do annual reports vary much in word count?
-annual_word_count <- all_budgets |>
+annual_word_count <- all_budgets_no_stop |>
   mutate(year = as.numeric(year)) |>
   group_by(year) |>
   summarise(word_count = n())
@@ -218,12 +217,12 @@ ggplot(annual_word_count, aes(x = year, y = word_count)) +
 
 ### Tracking the Usage of One Word Over Time
 
-Next, let us illustrate the effect of normalizing our frequencies for the total number of words used in each annual report, while also exploring the usage of the term "AWS", which we identified earlier as a word that was used much more frequently from 2014 to 2023 than from 2005 to 2013. First, let's look at the raw frequency of the usage of the term by year and plot it. 
+Next, let us illustrate the effect of normalizing our frequencies for the total number of words used in each annual report, while also exploring the usage of the term "AWS", which we identified earlier as a word that was used much more frequently from 2014 to 2023 than from 2005 to 2013. To do so, let's look at both the raw frequency of the term by year, and an frequency adjusted for the total number of words in the annual report. The adjustment used involves dividing the occurrences of the word we want to look at by the total word count for a given year, and then multiplying by the average word count across all of the years. 
 
 ```{r Raw Line Graph of One Word}
 
 # Prepare data for the line graph
-one_word_line_data <- all_budgets |>
+one_word_line_data <- all_budgets_no_stop |>
   group_by(year, word) |>
   mutate(year = as.numeric(year)) |>
   summarise(word_count = n(), .groups = "drop") |>
@@ -268,10 +267,29 @@ gridExtra::grid.arrange(raw_freq_p, adj_freq_p,
 
 ```
 
-Although AWS was estabilished in 1997, we see that the term was hardly used in Amazon's annual reports under around 2010, when it started to be used much more. Then, in the 2015 annual report the term was used almost 70 times. AWS seems to have remained an important topic in the reports, with the exceptions of 2019 and 2020. However, we know that the 2019 and 2020 reports were much shorter. So let's take a look at how this series looks when we normalize it for the total number of words used in each report. 
+Although AWS was established in 1997, we see that the term was hardly used in Amazon's annual reports under around 2010, when it started to be used much more. Then, in the 2015 annual report the term was used almost 70 times. AWS seems to have remained an important topic in the reports, with the exceptions of 2019 and 2020. Adjusting the series for the total word counts in the annual reports does not make a terribly large difference. However, the overall upward trend of the usage of the word "AWS" is slightly more discernible once we adjust for total word count. 
+
+## Relative Word Frequencies
+
+By looking at changes in the usage of certain words over time and adjusting for total word counts, we have begun to look at something a little bit more interesting. However, there are more systematic approaches to finding which words are relatively common in which annual reports than what we have done so far. On approach is to combine term frequency (tf) with inverse document frequence (idf) to generate a tf-idf statistic. In the book Text Mining With R, Julia Silge and David Robinson describe tf-idf as follows
+
+*"The statistic tf-idf is intended to measure how important a word is to a document in a collection (or corpus) of documents, for example, to one novel in a collection of novels or to one website in a collection of websites."*
+
+By looking at which words have the highest tf-idf statistics in a given annual report, we are able to get an idea of which words typify that annual report. 
+
+### Words that Typify The 2023 Annual Report
+
+First, let's look at the words with the highest tf-idf statistics from the 2023 annual report, to see which words are used most in the 2023 annual report *relative* to other years' reports.
+
+```{r tf-idf 2023 Report}
 
 
 
+
+
+```
+
+## Sentiment Analysis
 
 
 
